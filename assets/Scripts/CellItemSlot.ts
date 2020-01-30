@@ -1,11 +1,11 @@
 import BhvDragDrop from "./BhvDragDrop";
-import BhvFrameIndex from "./BhvFrameIndex";
 import BhvWordLocalize from "./BhvWordLocalize";
 
 const { ccclass, property } = cc._decorator;
-
 /**
  * 业务逻辑孔
+ * 1,如果是锁住的状态：不接收任何拖拽放置
+ * 2，如果是打开的状态：初始化时必须设置初始的单字，能够接受其他单字的拖拽放置
  */
 @ccclass
 export default class CellItemSlot extends cc.Component {
@@ -13,26 +13,48 @@ export default class CellItemSlot extends cc.Component {
     @property(cc.Node)
     dragItem: cc.Node = null;
 
-    @property
     acceptWord: string = "";
-
     // LIFE-CYCLE CALLBACKS:
-
-
+    @property({
+        tooltip: '是否禁止拖拽放置'
+    })
+    isLocked: boolean = false;
+    @property({
+        visible: function () {
+            return this.isLocked == false
+        },
+        tooltip: '禁止拖拽放置时，显示的颜色'
+    })
+    LockedColor: cc.Color = cc.color(0, 0, 0);
     onLoad() {
-        let comp = this.dragItem.getComponent(BhvDragDrop);
-        if (comp == null) {
-            comp = this.dragItem.addComponent(BhvDragDrop);
-            comp.parent = this.node.getParent();
-        }
-        comp.emitTarget = this.node; //将节点信号发送给本脚本
-        this.node.opacity = 0;
+
     }
 
     start() {
-        this.setItemWord(this.acceptWord);
-    }
 
+    }
+    init(isLocked: boolean, wordOjb?: cc.Node) {
+        if (isLocked == true) {
+            this.isLocked = true;
+            this.dragItem = null;
+            this.node.color = this.LockedColor;
+        } else {
+            this.isLocked = false;
+            this.dragItem = wordOjb;
+            let comp = this.dragItem.getComponent(BhvDragDrop);
+            if (comp == null) {
+                console.log("设置的 dragItem 没有 BhvDragDrop 组件，无法捕获 拖拽事件");
+            } else {
+                comp.emitTarget = this.node; //将节点信号发送给本脚本
+            }
+            let word = this.dragItem.getChildByName("word").getComponent(BhvWordLocalize).word;
+            if (word == null) {
+                console.log("设置的 dragItem 没有 word 节点，无法捕获 设置初始的字符");
+            } else {
+                this.acceptWord = word;
+            }
+        }
+    }
     setItemWord(word: string) {
         if (this.dragItem) {
             this.dragItem.getChildByName("word").getComponent(BhvWordLocalize).word = word;
@@ -62,7 +84,6 @@ export default class CellItemSlot extends cc.Component {
     }
 
     onDragStart(dragNode: cc.Node, tag: string) {
-        this.node.opacity = 55;
     }
 
     onDragMove(dragNode: cc.Node, tag: string) {
@@ -74,8 +95,7 @@ export default class CellItemSlot extends cc.Component {
     }
 
     onDropBack(dragNode: cc.Node, tag: string) {
-        this.node.opacity = 0;
-        console.log('ab');
+        console.log('onDropBack');
     }
 
     onMoveEnterOutRage(dragNode: cc.Node, tag: string) {
@@ -89,7 +109,6 @@ export default class CellItemSlot extends cc.Component {
     //丢出范围外，一般用于删除道具的判断
     onDropOutRage(dragNode: cc.Node, tag: string) {
         console.log('丢掉了道具-', dragNode.name);
-        // this.setItemWord("");
     }
 
     onDragEnterArea(dragNode: cc.Node, dropNode: cc.Node, tag: string) {
@@ -101,6 +120,8 @@ export default class CellItemSlot extends cc.Component {
     }
 
     onDropInArea(dragNode: cc.Node, dropNode: cc.Node, tag: string) {
+        if (this.isLocked == true) return;
+
         //交换两个道具的信息
         let target = dragNode.getComponent(BhvDragDrop).emitTarget;
 

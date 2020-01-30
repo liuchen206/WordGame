@@ -8,7 +8,7 @@
  */
 
 
-const {ccclass, property,menu,disallowMultiple} = cc._decorator;
+const { ccclass, property, menu, disallowMultiple } = cc._decorator;
 
 
 enum DRAG_MODE {
@@ -33,115 +33,138 @@ enum DRAG_EFFECT {
 @disallowMultiple
 export default class BhvDragDrop extends cc.Component {
 
+    @property(cc.Label)
+    wordLabel: cc.Label = null;
     //* 编辑器
 
     @property({
-        type:cc.Enum(DRAG_MODE),
-        tooltip:'拖拽对象的方式'
+        type: cc.Enum(DRAG_MODE),
+        tooltip: '拖拽对象的方式'
     })
-    dragMode:DRAG_MODE = DRAG_MODE.both;
+    dragMode: DRAG_MODE = DRAG_MODE.both;
 
     @property({
-        type:cc.Enum(DRAG_EFFECT),
-        tooltip:'拖拽对象,对象变化的效果'
+        type: cc.Enum(DRAG_EFFECT),
+        tooltip: '拖拽对象,对象变化的效果'
     })
-    dragEffect:DRAG_EFFECT = DRAG_EFFECT.none;
+    dragEffect: DRAG_EFFECT = DRAG_EFFECT.none;
 
     @property({
-        tooltip:'是否在拖拽时，将节点置于最顶层'
+        tooltip: '是否在拖拽时，将节点置于最顶层'
     })
-    dragToTop:boolean = false;
+    dragToTop: boolean = false;
 
     @property({
-        visible:function(){
+        visible: function () {
             return this.dragEffect == DRAG_EFFECT.scale
         },
-        tooltip:'拖拽对象，发生缩放变化的值'
+        tooltip: '拖拽对象，发生缩放变化的值'
     })
-    dragScale:cc.Vec2 = cc.v2(0.9,0.9);
+    dragScale: cc.Vec2 = cc.v2(0.9, 0.9);
 
     @property({
-        visible:function(){
+        visible: function () {
             return this.dragEffect == DRAG_EFFECT.color
         },
-        tooltip:'拖拽对象，发生颜色变化的值'
+        tooltip: '拖拽对象，发生颜色变化的值'
     })
-    dragColor:cc.Color = cc.color(255,0,0);
-
+    dragColor: cc.Color = cc.color(255, 0, 0);
     @property({
-        visible:function(){
+        visible: function () {
+            return this.dragEffect == DRAG_EFFECT.color
+        },
+        tooltip: '拖拽对象，字体发生颜色变化的值'
+    })
+    dragColorWord: cc.Color = cc.color(255, 0, 0);
+    @property({
+        visible: function () {
             return this.dragEffect == DRAG_EFFECT.opacity
         },
-        tooltip:'拖拽对象，发生不透明度变化的值'
+        tooltip: '拖拽对象，发生不透明度变化的值'
     })
-    dragOpacity:number = 200;
+    dragOpacity: number = 200;
 
     @property({
-        tooltip:'是否在拖拽时，锁定节点坐标值，不让节点进行移动'
+        tooltip: '是否在拖拽时，锁定节点坐标值，不让节点进行移动'
     })
-    isLimitPosition:boolean = true;
+    isLimitPosition: boolean = true;
 
     /**影响监听事件的发送 */
     @property({
-        tooltip:'标记，会激活对应tag 的 BhvDropArea',
-        visible:function(){return this.dragMode === DRAG_MODE.dropArea}
+        tooltip: '标记，会激活对应tag 的 BhvDropArea',
+        visible: function () { return this.dragMode === DRAG_MODE.dropArea }
     })
-    tag:string = '';
+    tag: string = '';
 
     @property({
-        type:cc.Node,
-        tooltip:'父节点，用于判断拖拽时是否超出了父节点的范围,未指定就获取默认父节点',
-        visible:function(){return this.dragMode === DRAG_MODE.dropArea}
+        type: cc.Node,
+        tooltip: '父节点，用于判断拖拽时是否超出了父节点的范围,未指定就获取默认父节点',
+        visible: function () { return this.dragMode === DRAG_MODE.dropArea }
     })
-    parent:cc.Node = null;
+    parent: cc.Node = null;
 
     @property({
-        visible:function(){return this.dragMode === DRAG_MODE.dropArea}
+        visible: function () { return this.dragMode === DRAG_MODE.dropArea }
     })
-    dropBack:boolean = true;
+    dropBack: boolean = true;
 
     @property({
-            tooltip:'如果成功拖放到节点上就自动销毁?' ,
-            visible:function(){return this.dragMode === DRAG_MODE.dropArea}     
+        tooltip: '如果成功拖放到节点上就自动销毁?',
+        visible: function () { return this.dragMode === DRAG_MODE.dropArea }
     })
-    dropDestroy:boolean = true;
+    dropDestroy: boolean = true;
 
     @property({
-        type:cc.Node,
-        tooltip:'拖拽节点的消息收发位置' ,
-        visible:function(){return this.dragMode === DRAG_MODE.dropArea}     
+        type: cc.Node,
+        tooltip: '拖拽节点的消息收发位置',
+        visible: function () { return this.dragMode === DRAG_MODE.dropArea }
     })
-    emitTarget:cc.Node = null;
+    emitTarget: cc.Node = null;
 
-
+    @property
+    isForbitDrag: boolean = false;
+    @property({
+        tooltip: '禁止拖拽时的背景颜色'
+    })
+    forbitDragColor: cc.Color = cc.color(255, 0, 0);
+    @property({
+        tooltip: '禁止拖拽时的字体颜色'
+    })
+    forbitDragWordColor: cc.Color = cc.color(255, 0, 0);
     //*属性
 
-    isMoving:boolean;
-    moveDeltaX:number;
-    moveDeltaY:number;
-    
-    private _pre_dragColor:cc.Color;
-    private _pre_scale:number;
-    private _pre_opacity:number;
-    
-    private _pre_position:cc.Vec2;
-    private _pre_zindex:number;
+    isMoving: boolean;
+    moveDeltaX: number;
+    moveDeltaY: number;
+
+    private _pre_dragColor: cc.Color;
+    private _pre_dragColorWord: cc.Color;
+    private _pre_scale: number;
+    private _pre_opacity: number;
+
+    private _pre_position: cc.Vec2;
+    private _pre_zindex: number;
 
 
     //占用标记，表示物品拖拽移动时，被某一个 判定区域所占用，避免触发第二次
-    public _usedFlag:string = null;
+    public _usedFlag: string = null;
 
-    private _preOutRange:boolean = false;
+    private _preOutRange: boolean = false;
 
     //拖拽时，是否超出边界框（用于丢弃物品 等判断）
-    public isOutRange:boolean = false; 
+    public isOutRange: boolean = false;
 
     //暂时保存的边界框
-    public outRangeBounds:cc.Rect = cc.rect(0,0,0,0);
-  
-    onLoad(){
-        if(this.emitTarget == null){
+    public outRangeBounds: cc.Rect = cc.rect(0, 0, 0, 0);
+
+    onLoad() {
+        if (this.emitTarget == null) {
             this.emitTarget = this.node;
+        }
+        if (this.isForbitDrag == true) {
+            this.node.color = this.forbitDragColor;
+            this.wordLabel.node.color = this.forbitDragWordColor;
+            this.node.removeComponent(BhvDragDrop);
         }
     }
 
@@ -150,179 +173,179 @@ export default class BhvDragDrop extends cc.Component {
      * @param target 
      * @param parent 
      */
-    public init(target:cc.Node,parent:cc.Node,config:any){
+    public init(target: cc.Node, parent: cc.Node, config: any) {
         this.emitTarget = target;
         this.parent = parent;
-        this.tag = config.tag||'';
+        this.tag = config.tag || '';
         this.dragEffect = config.effect;
-        this.dragScale =  config.dragScale;
+        this.dragScale = config.dragScale;
         this.dragColor = config.dragColor;
         this.dragOpacity = config.dragOpacity;
 
     }
-  
-    start () {
-        this.outRangeBounds =  this.getParentBounds();
+
+    start() {
+        this.outRangeBounds = this.getParentBounds();
         this.isMoving = false;
-        this._pre_zindex  = this.node.zIndex;
-        this.moveDeltaX =0 ;
-        this.moveDeltaY =0 ;
+        this._pre_zindex = this.node.zIndex;
+        this.moveDeltaX = 0;
+        this.moveDeltaY = 0;
     }
 
-    onEnable(){
+    onEnable() {
         //对象开始
-         this.node.on(cc.Node.EventType.TOUCH_START,this.onDragStart,this);
-         this.node.on(cc.Node.EventType.TOUCH_MOVE,this.onDragMove,this);
-         this.node.on(cc.Node.EventType.TOUCH_END,this.onDragDrop,this);
-         this.node.on(cc.Node.EventType.TOUCH_CANCEL,this.onDragDrop,this);
+        this.node.on(cc.Node.EventType.TOUCH_START, this.onDragStart, this);
+        this.node.on(cc.Node.EventType.TOUCH_MOVE, this.onDragMove, this);
+        this.node.on(cc.Node.EventType.TOUCH_END, this.onDragDrop, this);
+        this.node.on(cc.Node.EventType.TOUCH_CANCEL, this.onDragDrop, this);
     }
 
-    onDisable(){
-        this.node.off(cc.Node.EventType.TOUCH_START,this.onDragStart,this);
-        this.node.off(cc.Node.EventType.TOUCH_MOVE,this.onDragMove,this);
-        this.node.off(cc.Node.EventType.TOUCH_END,this.onDragDrop,this);
-        this.node.off(cc.Node.EventType.TOUCH_CANCEL,this.onDragDrop,this);
+    onDisable() {
+        this.node.off(cc.Node.EventType.TOUCH_START, this.onDragStart, this);
+        this.node.off(cc.Node.EventType.TOUCH_MOVE, this.onDragMove, this);
+        this.node.off(cc.Node.EventType.TOUCH_END, this.onDragDrop, this);
+        this.node.off(cc.Node.EventType.TOUCH_CANCEL, this.onDragDrop, this);
     }
 
-    getParentBounds():cc.Rect{
-        if(this.parent){
+    getParentBounds(): cc.Rect {
+        if (this.parent) {
             return this.parent.getBoundingBoxToWorld();
-        }else{
+        } else {
             return this.node.getParent().getBoundingBoxToWorld();
         }
     }
 
     //检查是否超出必要范围
-    checkOutRange():boolean{
+    checkOutRange(): boolean {
         let boundA = this.outRangeBounds;
         let boundB = this.node.getBoundingBoxToWorld();
-        if(!cc.Intersection.rectRect(boundB,boundA)){
+        if (!cc.Intersection.rectRect(boundB, boundA)) {
             this.isOutRange = true;
-        }else{
-           this.isOutRange = false;
+        } else {
+            this.isOutRange = false;
         }
         return this.isOutRange;
     }
 
     //自身拖拽开始
-    onDragStart(event){
+    onDragStart(event) {
         //开始,记录开始前的效果状态
         this.saveNodeEffect();
 
         //记录开始前的碰撞盒状态
-        this.outRangeBounds =  this.getParentBounds();
+        this.outRangeBounds = this.getParentBounds();
 
         //记录移动前的坐标
         this._pre_position = this.node.position;
-        this.moveDeltaX =0 ;
-        this.moveDeltaY =0 ;
+        this.moveDeltaX = 0;
+        this.moveDeltaY = 0;
 
-        if(this.dragToTop){
-            this.node.zIndex =  cc.macro.MAX_ZINDEX;
+        if (this.dragToTop) {
+            this.node.zIndex = cc.macro.MAX_ZINDEX;
         }
 
         //改变拖拽状态
         this.setNodeEffect(true);
 
-        if(this.dragMode === DRAG_MODE.dropArea){
-            cc.director.emit('onAreaDragStart:'+this.tag,event,this.tag);
+        if (this.dragMode === DRAG_MODE.dropArea) {
+            cc.director.emit('onAreaDragStart:' + this.tag, event, this.tag);
         }
 
-        this.emitTarget.emit('onDragStart',this.node,this.tag);
+        this.emitTarget.emit('onDragStart', this.node, this.tag);
 
 
 
     }
 
     //自身拖拽移动
-    onDragMove(event:cc.Event.EventTouch){
+    onDragMove(event: cc.Event.EventTouch) {
         this.isMoving = true;
         var delta = event.touch.getDelta();
-        
+
         switch (this.dragMode) {
             case DRAG_MODE.both:
             case DRAG_MODE.dropArea:
-                this.moveDeltaX +=delta.x ;
-                this.moveDeltaY +=delta.y ;
-                this.node.x = this._pre_position.x + this.moveDeltaX; 
-                this.node.y = this._pre_position.y + this.moveDeltaY; 
+                this.moveDeltaX += delta.x;
+                this.moveDeltaY += delta.y;
+                this.node.x = this._pre_position.x + this.moveDeltaX;
+                this.node.y = this._pre_position.y + this.moveDeltaY;
                 break;
             case DRAG_MODE.horizontal:
-                this.moveDeltaX +=delta.x ;
-                this.node.x = this._pre_position.x + this.moveDeltaX; 
+                this.moveDeltaX += delta.x;
+                this.node.x = this._pre_position.x + this.moveDeltaX;
                 break;
             case DRAG_MODE.vertical:
-                this.moveDeltaY +=delta.y ;
+                this.moveDeltaY += delta.y;
                 this.node.y += delta.y;
-                this.node.y = this._pre_position.y + this.moveDeltaY; 
+                this.node.y = this._pre_position.y + this.moveDeltaY;
                 break;
-        
+
             default:
                 break;
         }
 
         //区域检查
 
-        if(this.dragMode === DRAG_MODE.dropArea){
+        if (this.dragMode === DRAG_MODE.dropArea) {
 
-            this.isOutRange  = this.checkOutRange();
+            this.isOutRange = this.checkOutRange();
 
-            if(this.isOutRange !== this._preOutRange){
+            if (this.isOutRange !== this._preOutRange) {
                 this._preOutRange = this.isOutRange;
-                if(this._preOutRange){
+                if (this._preOutRange) {
                     this.onMoveEnterOutRage();
-                }else{
+                } else {
                     this.onMoveLeaveOutRage();
                 }
             }
-    
-            cc.director.emit('onAreaDragMove:'+this.tag,event,this.tag);
-            
+
+            cc.director.emit('onAreaDragMove:' + this.tag, event, this.tag);
+
         }
 
-        this.emitTarget.emit('onDragMove',this.node,this.tag);
+        this.emitTarget.emit('onDragMove', this.node, this.tag);
 
 
- 
+
     }
 
     //自身拖拽结束
-    onDragDrop(event){
+    onDragDrop(event) {
 
         //恢复拖拽状态
         this.isMoving = false;
         this.setNodeEffect(false);
 
-        if(this.dragToTop){
-            this.node.zIndex =  this._pre_zindex;
+        if (this.dragToTop) {
+            this.node.zIndex = this._pre_zindex;
         }
-        
+
         //区域检查
-        if(this.isOutRange){
+        if (this.isOutRange) {
             this.onDropOutRage();
         }
         /////////////////
-        if(this.dragMode === DRAG_MODE.dropArea){
+        if (this.dragMode === DRAG_MODE.dropArea) {
             // this.node.x = this._pre_position.x;
             // this.node.y = this._pre_position.y;
-            if(this.dropBack){
-                let action = cc.moveTo(0.3,this._pre_position.x,this._pre_position.y).easing(cc.easeBackOut());
+            if (this.dropBack) {
+                let action = cc.moveTo(0.3, this._pre_position.x, this._pre_position.y).easing(cc.easeBackOut());
                 this.node.runAction(cc.sequence([
                     action,
-                    cc.callFunc(()=>{
-                        this.emitTarget.emit('onDropBack',this.node,this.tag);//回弹的动画
+                    cc.callFunc(() => {
+                        this.emitTarget.emit('onDropBack', this.node, this.tag);//回弹的动画
                     })
                 ]));
-            }else{
+            } else {
                 this.node.x = this._pre_position.x;
                 this.node.y = this._pre_position.y;
             }
-            
-            cc.director.emit('onAreaDragDrop:'+this.tag,event,this.tag);
+
+            cc.director.emit('onAreaDragDrop:' + this.tag, event, this.tag);
         }
 
 
-        this.emitTarget.emit('onDragDrop',this.node,this.tag);
+        this.emitTarget.emit('onDragDrop', this.node, this.tag);
 
 
     }
@@ -330,31 +353,31 @@ export default class BhvDragDrop extends cc.Component {
     //拖拽到别的节点的情况
 
     //移出边界范围
-    onMoveEnterOutRage(){
+    onMoveEnterOutRage() {
         // console.log('进入 边界范围');
         // let node = this.node.getChildByName('delete');
         // if(node)node.active = true;
-        this.emitTarget.emit('onMoveEnterOutRage',this.node,this.tag);
+        this.emitTarget.emit('onMoveEnterOutRage', this.node, this.tag);
     }
 
     //从边界范围移回来
-    onMoveLeaveOutRage(){
+    onMoveLeaveOutRage() {
         // console.log('离开边界范围');
         // let node = this.node.getChildByName('delete');
         // if(node)node.active = false;
-        this.emitTarget.emit('onMoveLeaveOutRage',this.node,this.tag);
+        this.emitTarget.emit('onMoveLeaveOutRage', this.node, this.tag);
     }
 
     //从边界范围外丢下了东西
-    onDropOutRage(){
+    onDropOutRage() {
         let node = this.node.getChildByName('delete');
-        if(node)node.active = false;
-        this.emitTarget.emit('onDropOutRage',this.node,this.tag);
+        if (node) node.active = false;
+        this.emitTarget.emit('onDropOutRage', this.node, this.tag);
     }
 
     // //[可能不需要的回调]拖动该物体时，进入了某个节点的区域
     // onDragMoveEnter(enterNode:cc.Node){
-        
+
     //     //this.emitTarget.emit('onDragMoveEnter',enterNode);
     // }
 
@@ -391,41 +414,44 @@ export default class BhvDragDrop extends cc.Component {
     // }
 
 
-    private saveNodeEffect(){
+    private saveNodeEffect() {
         this._pre_dragColor = this.node.color;
+        this._pre_dragColorWord = this.wordLabel.node.color;
         this._pre_scale = this.node.scale;
-        this._pre_opacity = this.node.opacity; 
+        this._pre_opacity = this.node.opacity;
     }
 
-    private setNodeEffect(apply:boolean){
-        if(apply){
+    private setNodeEffect(apply: boolean) {
+        if (apply) {
             switch (this.dragEffect) {
                 case DRAG_EFFECT.color:
                     this.node.color = this.dragColor;
+                    this.wordLabel.node.color = this.dragColorWord;
                     break;
                 case DRAG_EFFECT.scale:
                     this.node.scaleX = this.dragScale.x;
                     this.node.scaleY = this.dragScale.y;
                     break;
                 case DRAG_EFFECT.opacity:
-                    this.node.opacity = this.dragOpacity; 
+                    this.node.opacity = this.dragOpacity;
                     break;
-            
+
                 default:
                     break;
             }
-        }else{
+        } else {
             switch (this.dragEffect) {
                 case DRAG_EFFECT.color:
                     this.node.color = this._pre_dragColor;
+                    this.wordLabel.node.color = this._pre_dragColorWord;
                     break;
                 case DRAG_EFFECT.scale:
                     this.node.scale = this._pre_scale;
                     break;
                 case DRAG_EFFECT.opacity:
-                    this.node.opacity = this._pre_opacity; 
+                    this.node.opacity = this._pre_opacity;
                     break;
-            
+
                 default:
                     break;
             }
@@ -434,10 +460,10 @@ export default class BhvDragDrop extends cc.Component {
 
 
 
-    update () {
-        if(!this.isLimitPosition || !this.isMoving)return;
-        this.node.x = this._pre_position.x + this.moveDeltaX; 
-        this.node.y = this._pre_position.y + this.moveDeltaY; 
+    update() {
+        if (!this.isLimitPosition || !this.isMoving) return;
+        this.node.x = this._pre_position.x + this.moveDeltaX;
+        this.node.y = this._pre_position.y + this.moveDeltaY;
     }
 
 
