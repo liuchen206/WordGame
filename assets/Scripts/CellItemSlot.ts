@@ -1,5 +1,7 @@
 import BhvDragDrop from "./BhvDragDrop";
 import BhvWordLocalize from "./BhvWordLocalize";
+import { waitForAction } from "./Tools/Tools";
+import Gaming from "./Gaming";
 
 const { ccclass, property } = cc._decorator;
 /**
@@ -119,7 +121,7 @@ export default class CellItemSlot extends cc.Component {
 
     }
 
-    onDropInArea(dragNode: cc.Node, dropNode: cc.Node, tag: string) {
+    async onDropInArea(dragNode: cc.Node, dropNode: cc.Node, tag: string) {
         if (this.isLocked == true) return;
 
         //交换两个道具的信息
@@ -133,14 +135,12 @@ export default class CellItemSlot extends cc.Component {
         selfItem.setItemWord(otherWord);
         otherItem.setItemWord(selfWord);
 
-
         let action = cc.sequence([
             cc.scaleTo(0.05, otherItem.node.scale * 1.2).easing(cc.easeBackIn()),
             cc.scaleTo(0.2, otherItem.node.scale).easing(cc.easeBackOut())
         ])
-
-        this.dragItem.runAction(action);
-
+        await waitForAction(this.dragItem, action);
+        console.log("cheakWin", cc.find("Canvas/Gaming").getComponent(Gaming).cheakWin());
     }
 
     //丢在区域外部，一般用于检测区域结束
