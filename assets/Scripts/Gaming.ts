@@ -10,6 +10,10 @@ const { ccclass, property } = cc._decorator;
 
 @ccclass
 export default class Gaming extends cc.Component {
+    @property(cc.Label)
+    labelTitle: cc.Label = null;
+    @property(cc.Label)
+    labelLevel: cc.Label = null;
     @property(cc.Prefab)
     wordObjPrefab: cc.Prefab = null;
     @property(cc.Node)
@@ -27,8 +31,17 @@ export default class Gaming extends cc.Component {
     }
 
     // update (dt) {}
-
+    setTitle() {
+        if (GameDataRuntime.LevelType == LevelTypes.Poem) {
+            this.labelTitle.string = "古诗";
+        }
+        if (GameDataRuntime.LevelType == LevelTypes.Idiom) {
+            this.labelTitle.string = "成语";
+        }
+        this.labelLevel.string = "关卡：" + (GameDataRuntime.LevelIndex + 1);
+    }
     loadGame() {
+        this.setTitle();
         if (GameDataRuntime.LevelType == LevelTypes.Poem) {
             if (GameDataRuntime.LevelIndex < IdiomList.length) {
                 let levelData = IdiomList[GameDataRuntime.LevelIndex];
@@ -78,16 +91,15 @@ export default class Gaming extends cc.Component {
         let randomJ2 = 0;
         while (randomWord2 == "0" || randomWord2[0] == "_" || randomWord2 == randomWord) {
             randomI2 = Math.floor(Math.random() * levelData.length);
-            randomI2 = Math.floor(Math.random() * row.length);
+            randomJ2 = Math.floor(Math.random() * row.length);
             randomWord2 = levelData[randomI2][randomJ2];
         }
         // 交换两个word
         this.exchangeWordObj(randomI, randomJ, randomI2, randomJ2, row.length);
-        console.log("交换", randomWord, "to", randomWord2);
+        console.log("交换", randomI, randomJ, "to", randomI2, randomJ2, randomWord, "to", randomWord2);
     }
 
     exchangeWordObj(i, j, i2, j2, rowLength) {
-        console.log("交换", i, j, "to", i2, j2);
         let firstSlot = this.slotRootNode.children[i * rowLength + j];
         let secondSlot = this.slotRootNode.children[i2 * rowLength + j2];
         let firstSlotWord = firstSlot.getComponent(CellItemSlot).acceptWord;
@@ -121,5 +133,16 @@ export default class Gaming extends cc.Component {
             }
         }
         return true;
+    }
+
+    onBackLobby() {
+        cc.director.loadScene('Lobby');
+    }
+    onRefresh() {
+        this.randomWords();
+    }
+    onHits(){
+        // 找到一个错误的 slot
+        // 找到错误的 slot 对应的 word 且 该word在自己的slot上也时错误的
     }
 }
